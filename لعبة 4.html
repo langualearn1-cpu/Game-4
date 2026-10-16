@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تمرين تفاعلي - ورقة عمل المقارنة والتفضيل</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Cairo, Fredoka & Comic Neue -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Fredoka:wght@400;600;700&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        cairo: ['Cairo', 'sans-serif'],
+                        en: ['Fredoka', 'Nunito', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            purple: '#6D28D9',
+                            coral: '#F43F5E',
+                            gold: '#F59E0B',
+                            cream: '#FFFBEB',
+                            teal: '#0D9488'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: linear-gradient(135deg, #fef6ee 0%, #fdf2f8 35%, #f0fdfa 70%, #eff6ff 100%);
+            min-height: 100vh;
+        }
+        .en-font {
+            font-family: 'Fredoka', 'Nunito', sans-serif;
+        }
+        /* Style imitating three-line school ruled handwriting notebooks */
+        .handwriting-box {
+            position: relative;
+            background: #ffffff;
+            border-bottom: 2.5px solid #334155;
+            transition: all 0.25s ease;
+        }
+        .handwriting-box::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            border-bottom: 1.5px dashed #94a3b8;
+            pointer-events: none;
+        }
+        .word-draggable {
+            touch-action: none;
+            user-select: none;
+            cursor: grab;
+            transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s;
+        }
+        .word-draggable:active {
+            cursor: grabbing;
+        }
+        .selected-chip {
+            box-shadow: 0 0 0 3px #8B5CF6, 0 8px 20px -4px rgba(139, 92, 246, 0.45) !important;
+            transform: translateY(-3px) scale(1.05);
+            background-color: #EDE9FE !important;
+            border-color: #7C3AED !important;
+        }
+        .slot-target-active {
+            background-color: #FEF3C7 !important;
+            border-bottom-color: #D97706 !important;
+            transform: scale(1.02);
+        }
+        @keyframes gentle-bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-4px); }
+        }
+        .badge-bounce {
+            animation: gentle-bounce 2.5s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="text-slate-800 pb-16 selection:bg-purple-100">
+
+    <!-- Top Header mimicking worksheet branding -->
+    <header class="bg-white/90 backdrop-blur-md border-b border-amber-200 sticky top-0 z-40 shadow-xs">
+        <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-400 via-rose-500 to-purple-600 flex items-center justify-center text-white text-2xl shadow-sm">
+                    🎓
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs bg-purple-100 text-purple-800 font-extrabold px-2.5 py-0.5 rounded-full en-font tracking-wide">LANGUA LEARN</span>
+                        <span class="text-xs text-slate-500 hidden sm:inline">| إعداد: المعلم ماجد السويهري</span>
+                    </div>
+                    <h1 class="text-base sm:text-lg font-black text-slate-800 leading-tight">
+                        ورقة عمل تفاعلية: المقارنة والتفضيل (Comparative & Superlative)
+                    </h1>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <!-- Sound Toggle -->
+                <button onclick="toggleSound()" id="soundBtn" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition" title="كتم/تشغيل المؤثرات">
+                    <span id="soundIcon" class="text-lg">🔊</span>
+                </button>
+                <!-- Score Display -->
+                <div class="bg-gradient-to-r from-amber-50 to-amber-100 border border-amber-300 px-3.5 py-1.5 rounded-2xl flex items-center gap-2 shadow-xs">
+                    <span class="text-amber-500 text-lg">⭐</span>
+                    <span class="text-xs font-bold text-amber-900">الدرجة:</span>
+                    <span id="scoreBadge" class="font-black text-amber-950 text-base en-font">0</span>
+                    <span class="text-xs text-amber-700">/ 5</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-4 mt-6">
+        <!-- THE INTERACTIVE WORKSHEET (DIRECT REPLICA OF USER IMAGE) -->
+        <section id="tab-worksheet" class="block">
+            <div class="bg-white/95 rounded-3xl p-5 md:p-8 shadow-xl border-2 border-amber-200 relative overflow-hidden">
+                <!-- Floral Background Decors matching image aesthetic -->
+                <div class="absolute -top-8 -right-8 w-28 h-28 bg-rose-200/40 rounded-full blur-2xl pointer-events-none"></div>
+                <div class="absolute -bottom-8 -left-8 w-28 h-28 bg-purple-200/40 rounded-full blur-2xl pointer-events-none"></div>
+
+                <!-- Header Title matching the image -->
+                <div class="text-center pb-2">
+                    <h2 class="text-3xl md:text-4xl font-black text-slate-800 en-font tracking-wide">
+                        choose the correct answer.
+                    </h2>
+                    <p class="text-sm text-slate-600 font-semibold mt-1">
+                        اسحب الكلمة المناسبة وضعها في الفراغ، أو <span class="text-purple-600 font-bold underline">انقر على الكلمة ثم انقر على الفراغ</span> المخصص لها.
+                    </p>
+                </div>
+
+                <!-- Word Bank Box (Exact replica of the amber pill box in the image) -->
+                <div class="bg-gradient-to-r from-amber-100 via-amber-50 to-amber-100 border-2 border-amber-300 rounded-3xl p-4 md:p-5 shadow-sm my-4 relative">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                            <span class="text-amber-500">⭐</span>
+                            <span>بنك الكلمات (Word Bank) - اختر أو اسحب:</span>
+                        </span>
+                        <span class="text-[11px] text-slate-500">يدعم الماوس واللمس</span>
+                    </div>
+
+                    <div id="wordBankList" class="flex flex-wrap items-center justify-center gap-3 pt-1 min-h-[52px]">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Questions Container -->
+                <div class="mt-6 space-y-6">
+
+                    <!-- ITEM 1: Hair comparison -->
+                    <div class="question-row bg-slate-50/70 hover:bg-slate-50 transition border border-slate-200/90 rounded-2xl p-4 md:p-5 flex flex-col md:flex-row items-center justify-between gap-4">
+                        <div class="flex-1 w-full text-right" dir="ltr">
+                            <div class="flex items-center gap-2 mb-2 text-xs font-bold text-slate-400" dir="rtl">
+                                <span class="w-6 h-6 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center text-xs font-black">1</span>
+                                <span>مقارنة طول الشعر (Long $\rightarrow$ Longer)</span>
+                            </div>
+
+                            <div class="flex flex-wrap items-center gap-2 en-font text-lg md:text-xl font-bold text-slate-800">
+                                <span>1- Her hair is</span>
+                                <div id="drop-q1" 
+                                     data-qid="q1" 
+                                     onclick="handleSlotClick('q1')"
+                                     class="handwriting-box min-w-[170px] min-h-[46px] px-3 py-1 rounded-md flex items-center justify-center transition cursor-pointer">
+                                    <span class="slot-placeholder text-xs text-slate-400 font-normal font-sans">اسحب أو انقر هنا</span>
+                                </div>
+                                <span>than my hair.</span>
+                                <button onclick="speakText('Her hair is longer than my hair')" class="p-1.5 text-slate-400 hover:text-purple-600 rounded-lg hover:bg-purple-50 transition" title="استمع للنطق الإنجليزي">
+                                    🔊
+                                </button>
+                            </div>
+                            <div id="feedback-q1" class="text-xs font-bold mt-2 text-right hidden" dir="rtl"></div>
+                        </div>
+
+                        <!-- Visual 1: Princess with very long hair matching the image -->
+                        <div class="w-28 h-28 flex-shrink-0 flex items-center justify-center bg-white rounded-2xl border border-amber-100 shadow-xs overflow-hidden">
+                            <svg class="w-24 h-24" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <!-- Very long flowing golden hair cascading down -->
+                                <path d="M45 20 C20 30, 20 60, 30 85 C35 95, 45 95, 40 85 C32 68, 38 45, 48 35 Z" fill="#FBBF24" stroke="#D97706" stroke-width="1.5"/>
+                                <path d="M55 20 C80 30, 80 60, 70 85 C65 95, 55 95, 60 85 C68 68, 62 45, 52 35 Z" fill="#FBBF24" stroke="#D97706" stroke-width="1.5"/>
+                                <path d="M40 75 C45 92, 55 95, 60 75 Z" fill="#F59E0B"/>
+                                <!-- Cute Head & Face -->
+                                <circle cx="50" cy="35" r="14" fill="#FED7AA"/>
+                                <!-- Top Hair -->
+                                <path d="M36 32 C36 18, 64 18, 64 32 C64 24, 36 24, 36 32 Z" fill="#F59E0B"/>
+                                <!-- Eyes & Smile -->
+                                <circle cx="46" cy="35" r="1.5" fill="#475569"/>
+                                <circle cx="54" cy="35" r="1.5" fill="#475569"/>
+                                <path d="M48 40 Q50 42 52 40" stroke="#E11D48" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+                                <!-- Cute Purple Dress -->
+                                <path d="M42 49 L36 78 C42 80, 58 80, 64 78 L58 49 Z" fill="#C084FC" stroke="#9333EA" stroke-width="1.5"/>
+                                <!-- Arms holding hair -->
+                                <path d="M42 52 C38 60, 44 65, 48 62" stroke="#FED7AA" stroke-width="2.5" stroke-linecap="round"/>
+                                <path d="M58 52 C62 60, 56 65, 52 62" stroke="#FED7AA" stroke-width="2.5" stroke-linecap="round"/>
+                                <text x="50" y="97" font-size="7" font-weight="bold" fill="#D97706" text-anchor="middle" font-family="Fredoka">Long Hair 💇</text>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <!-- ITEM 2: Good / Better Bags comparison -->
+                    <div class="question-row bg-slate-50/70 hover:bg-slate-50 transition border border-slate-200/90 rounded-2xl p-4 md:p-5 flex flex-col md:flex-row items-center justify-between gap-4">
+                        <div class="flex-1 w-full text-right" dir="ltr">
+                            <div class="flex items-center gap-2 mb-2 text-xs font-bold text-slate-400" dir="rtl">
+                                <span class="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-black">2</span>
+                                <span>صفة شاذة غير منتظمة (Good $\rightarrow$ Better than)</span>
+                            </div>
+
+                            <div class="flex flex-wrap items-center gap-2 en-font text-lg md:text-xl font-bold text-slate-800">
+                                <span>2- The red bag is good, but the blue bag is</span>
+                                <div id="drop-q2" 
+                                     data-qid="q2" 
+                                     onclick="handleSlotClick('q2')"
+                                     class="handwriting-box min-w-[170px] min-h-[46px] px-3 py-1 rounded-md flex items-center justify-center transition cursor-pointer">
+                                    <span class="slot-placeholder text-xs text-slate-400 font-normal font-sans">اسحب أو انقر هنا</span>
+                                </div>
+                                <span>than the red bag.</span>
+                                <button onclick="speakText('The red bag is good, but the blue bag is better than the red bag')" class="p-1.5 text-slate-400 hover:text-purple-600 rounded-lg hover:bg-purple-50 transition" title="استمع للنطق الإنجليزي">
+                                    🔊
+                                </button>
+                            </div>
+                            <div id="feedback-q2" class="text-xs font-bold mt-2 text-right hidden" dir="rtl"></div>
+                        </div>
+
+                        <!-- Visual 2: Blue Backpack & Red Backpack matching the image -->
+                        <div class="w-28 h-28 flex-shrink-0 flex items-center justify-center bg-white rounded-2xl border border-blue-100 shadow-xs overflow-hidden">
+                            <svg class="w-24 h-24" viewBox="0 0 110 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <!-- Blue Bag (Better ⭐) -->
+                                <rect x="12" y="28" width="36" height="48" rx="8" fill="#3B82F6" stroke="#1D4ED8" stroke-width="2"/>
+                                <path d="M22 28 V20 C22 16, 38 16, 38 20 V28" stroke="#1D4ED8" stroke-width="2.5" fill="none"/>
+                                <rect x="18" y="52" width="24" height="18" rx="4" fill="#60A5FA" stroke="#1D4ED8" stroke-width="1.5"/>
+                                <circle cx="30" cy="40" r="4" fill="#FBBF24"/>
+                                <text x="30" y="43" font-size="6" font-weight="black" fill="#78350F" text-anchor="middle">★</text>
+                                <text x="30" y="86" font-size="7" font-weight="bold" fill="#1D4ED8" text-anchor="middle" font-family="Fredoka">Blue: Better</text>
+
+                                <!-- Red Bag (Good 👍) -->
+                                <rect x="58" y="32" width="34" height="44" rx="8" fill="#EF4444" stroke="#B91C1C" stroke-width="2"/>
+                                <path d="M68 32 V24 C68 21, 82 21, 82 24 V32" stroke="#B91C1C" stroke-width="2.5" fill="none"/>
+                                <rect x="64" y="54" width="22" height="16" rx="4" fill="#F87171" stroke="#B91C1C" stroke-width="1.5"/>
+                                <text x="75" y="86" font-size="7" font-weight="bold" fill="#B91C1C" text-anchor="middle" font-family="Fredoka">Red: Good</text>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <!-- ITEM 3: Snail, Rabbit, Turtle -> Rabbit is the fastest -->
+                    <div class="question-row bg-slate-50/70 hover:bg-slate-50 transition border border-slate-200/90 rounded-2xl p-4 md:p-5 flex flex-col md:flex-row items-center justify-between gap-4">
+                        <div class="flex-1 w-full text-right" dir="ltr">
+                            <div class="flex items-center gap-2 mb-2 text-xs font-bold text-slate-400" dir="rtl">
+                                <span class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-black">3</span>
+                                <span>صيغة تفضيل قصيرة (The + fast + est)</span>
+                            </div>
+
+                            <div class="flex flex-wrap items-center gap-2 en-font text-lg md:text-xl font-bold text-slate-800">
+                                <span>3- A rabbit is the</span>
+                                <div id="drop-q3" 
+                                     data-qid="q3" 
+                                     onclick="handleSlotClick('q3')"
+                                     class="handwriting-box min-w-[170px] min-h-[46px] px-3 py-1 rounded-md flex items-center justify-center transition cursor-pointer">
+                                    <span class="slot-placeholder text-xs text-slate-400 font-normal font-sans">اسحب أو انقر هنا</span>
+                                </div>
+                                <span class="text-slate-400">.</span>
+                                <button onclick="speakText('A rabbit is the fastest')" class="p-1.5 text-slate-400 hover:text-purple-600 rounded-lg hover:bg-purple-50 transition" title="استمع للنطق الإنجليزي">
+                                    🔊
+                                </button>
+                            </div>
+                            <div id="feedback-q3" class="text-xs font-bold mt-2 text-right hidden" dir="rtl"></div>
+                        </div>
+
+                        <!-- Visual 3: Snail, Rabbit, Turtle in a race -->
+                        <div class="w-36 h-24 flex-shrink-0 flex items-center justify-center bg-white rounded-2xl border border-emerald-100 shadow-xs px-2">
+                            <svg class="w-32 h-20" viewBox="0 0 150 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <!-- Snail on Left -->
+                                <circle cx="22" cy="58" r="12" fill="#D97706" stroke="#92400E" stroke-width="1.5"/>
+                                <path d="M10 68 C16 66, 32 66, 34 68 C35 70, 28 72, 10 72 Z" fill="#FDE68A"/>
+                                <path d="M30 58 L36 50 M26 58 L30 48" stroke="#92400E" stroke-width="1.2"/>
+
+                                <!-- Cute White Rabbit in Center (Fastest 🐇⚡) -->
+                                <circle cx="78" cy="58" r="16" fill="#F8FAFC" stroke="#94A3B8" stroke-width="1.5"/>
+                                <!-- Ears -->
+                                <ellipse cx="73" cy="30" rx="4.5" ry="14" fill="#F8FAFC" stroke="#94A3B8" stroke-width="1.5"/>
+                                <ellipse cx="73" cy="30" rx="2" ry="9" fill="#FBCFE8"/>
+                                <ellipse cx="83" cy="30" rx="4.5" ry="14" fill="#F8FAFC" stroke="#94A3B8" stroke-width="1.5"/>
+                                <ellipse cx="83" cy="30" rx="2" ry="9" fill="#FBCFE8"/>
+                                <!-- Rabbit Face -->
+                                <circle cx="73" cy="55" r="1.5" fill="#334155"/>
+                                <circle cx="83" cy="55" r="1.5" fill="#334155"/>
+                                <circle cx="78" cy="60" r="1.5" fill="#F43F5E"/>
+                                <text x="78" y="20" font-size="9" text-anchor="middle">⚡</text>
+
+                                <!-- Turtle on Right -->
+                                <path d="M115 62 C115 45, 142 45, 142 62 Z" fill="#15803D" stroke="#166534" stroke-width="1.5"/>
+                                <circle cx="145" cy="58" r="5" fill="#86EFAC" stroke="#166534" stroke-width="1.2"/>
+                                <rect x="118" y="62" width="6" height="8" rx="2" fill="#86EFAC"/>
+                                <rect x="135" y="62" width="6" height="8" rx="2" fill="#86EFAC"/>
+
+                                <text x="75" y="85" font-size="7" font-weight="bold" fill="#0F766E" text-anchor="middle" font-family="Fredoka">Rabbit = Fastest ⚡</text>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <!-- ITEM 4: Butterfly & Bee -> more beautiful than -->
+                    <div class="question-row bg-slate-50/70 hover:bg-slate-50 transition border border-slate-200/90 rounded-2xl p-4 md:p-5 flex flex-col md:flex-row items-center justify-between gap-4">
+                        <div class="flex-1 w-full text-right" dir="ltr">
+                            <div class="flex items-center gap-2 mb-2 text-xs font-bold text-slate-400" dir="rtl">
+                                <span class="w-6 h-6 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center text-xs font-black">4</span>
+                                <span>مقارنة لصفة طويلة (More + beautiful + than)</span>
+                            </div>
+
+                            <div class="flex flex-wrap items-center gap-2 en-font text-lg md:text-xl font-bold text-slate-800">
+                                <span>4- Butterflies are</span>
+                                <div id="drop-q4" 
+                                     data-qid="q4" 
+                                     onclick="handleSlotClick('q4')"
+                                     class="handwriting-box min-w-[200px] min-h-[46px] px-3 py-1 rounded-md flex items-center justify-center transition cursor-pointer">
+                                    <span class="slot-placeholder text-xs text-slate-400 font-normal font-sans">اسحب أو انقر هنا</span>
+                                </div>
+                                <span>than bees.</span>
+                                <button onclick="speakText('Butterflies are more beautiful than bees')" class="p-1.5 text-slate-400 hover:text-purple-600 rounded-lg hover:bg-purple-50 transition" title="استمع للنطق الإنجليزي">
+                                    🔊
+                                </button>
+                            </div>
+                            <div id="feedback-q4" class="text-xs font-bold mt-2 text-right hidden" dir="rtl"></div>
+                        </div>
+
+                        <!-- Visual 4: Gorgeous Butterfly & Happy Bee -->
+                        <div class="w-32 h-24 flex-shrink-0 flex items-center justify-center bg-white rounded-2xl border border-rose-100 shadow-xs">
+                            <svg class="w-28 h-20" viewBox="0 0 130 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <!-- Butterfly (Left) -->
+                                <path d="M35 45 C15 20, 0 35, 12 55 C18 64, 30 60, 35 48 Z" fill="#E879F9" stroke="#A21CAF" stroke-width="1.2"/>
+                                <path d="M35 45 C55 20, 70 35, 58 55 C52 64, 40 60, 35 48 Z" fill="#E879F9" stroke="#A21CAF" stroke-width="1.2"/>
+                                <path d="M35 48 C25 55, 10 70, 20 78 C30 82, 35 65, 35 50 Z" fill="#C084FC" stroke="#A21CAF" stroke-width="1.2"/>
+                                <path d="M35 48 C45 55, 60 70, 50 78 C40 82, 35 65, 35 50 Z" fill="#C084FC" stroke="#A21CAF" stroke-width="1.2"/>
+                                <rect x="33.5" y="38" width="3" height="24" rx="1.5" fill="#581C87"/>
+
+                                <!-- Cute Bumble Bee (Right) -->
+                                <ellipse cx="98" cy="52" rx="14" ry="11" fill="#FACC15" stroke="#713F12" stroke-width="1.5"/>
+                                <!-- Stripes -->
+                                <path d="M94 42 V62 M102 42 V62" stroke="#1E293B" stroke-width="3" stroke-linecap="round"/>
+                                <!-- Wings -->
+                                <ellipse cx="95" cy="36" rx="6" ry="9" fill="#E0F2FE" stroke="#0284C7" stroke-width="1.2"/>
+                                <ellipse cx="103" cy="37" rx="5" ry="8" fill="#E0F2FE" stroke="#0284C7" stroke-width="1.2"/>
+                                <!-- Eye & Stinger -->
+                                <circle cx="108" cy="50" r="1.5" fill="#1E293B"/>
+                                <polygon points="84,52 80,50 80,54" fill="#713F12"/>
+
+                                <text x="65" y="86" font-size="7" font-weight="bold" fill="#A21CAF" text-anchor="middle" font-family="Fredoka">Butterfly 🦋 & Bee 🐝</text>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <!-- ITEM 5: Snail, Turtle, Cat -> The snail is the smallest -->
+                    <div class="question-row bg-slate-50/70 hover:bg-slate-50 transition border border-slate-200/90 rounded-2xl p-4 md:p-5 flex flex-col md:flex-row items-center justify-between gap-4">
+                        <div class="flex-1 w-full text-right" dir="ltr">
+                            <div class="flex items-center gap-2 mb-2 text-xs font-bold text-slate-400" dir="rtl">
+                                <span class="w-6 h-6 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-xs font-black">5</span>
+                                <span>صيغة تفضيل لصفة قصيرة (The + small + est)</span>
+                            </div>
+
+                            <div class="flex flex-wrap items-center gap-2 en-font text-lg md:text-xl font-bold text-slate-800">
+                                <span>5- The snail is the</span>
+                                <div id="drop-q5" 
+                                     data-qid="q5" 
+                                     onclick="handleSlotClick('q5')"
+                                     class="handwriting-box min-w-[170px] min-h-[46px] px-3 py-1 rounded-md flex items-center justify-center transition cursor-pointer">
+                                    <span class="slot-placeholder text-xs text-slate-400 font-normal font-sans">اسحب أو انقر هنا</span>
+                                </div>
+                                <span class="text-slate-400">.</span>
+                                <button onclick="speakText('The snail is the smallest')" class="p-1.5 text-slate-400 hover:text-purple-600 rounded-lg hover:bg-purple-50 transition" title="استمع للنطق الإنجليزي">
+                                    🔊
+                                </button>
+                            </div>
+                            <div id="feedback-q5" class="text-xs font-bold mt-2 text-right hidden" dir="rtl"></div>
+                        </div>
+
+                        <!-- Visual 5: Tiny Snail, Medium Turtle, Big Cat -->
+                        <div class="w-36 h-24 flex-shrink-0 flex items-center justify-center bg-white rounded-2xl border border-amber-100 shadow-xs px-2">
+                            <svg class="w-32 h-20" viewBox="0 0 150 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <!-- Tiny Snail on Left (Smallest) -->
+                                <circle cx="20" cy="62" r="9" fill="#EA580C" stroke="#9A3412" stroke-width="1.2"/>
+                                <path d="M10 70 C15 68, 28 68, 30 70 Z" fill="#FED7AA"/>
+                                <line x1="28" y1="62" x2="31" y2="55" stroke="#9A3412" stroke-width="1"/>
+                                <text x="20" y="50" font-size="7" font-weight="black" fill="#C2410C" text-anchor="middle">🔍 tiny</text>
+
+                                <!-- Medium Turtle in Middle -->
+                                <path d="M60 65 C60 50, 85 50, 85 65 Z" fill="#15803D" stroke="#166534" stroke-width="1.5"/>
+                                <circle cx="88" cy="62" r="4.5" fill="#86EFAC" stroke="#166534" stroke-width="1"/>
+                                <rect x="63" y="65" width="5" height="7" rx="1.5" fill="#86EFAC"/>
+                                <rect x="78" y="65" width="5" height="7" rx="1.5" fill="#86EFAC"/>
+
+                                <!-- Cat on Right (Largest in this trio) -->
+                                <ellipse cx="125" cy="58" rx="12" ry="16" fill="#FB923C" stroke="#C2410C" stroke-width="1.5"/>
+                                <circle cx="125" cy="38" r="9" fill="#FB923C" stroke="#C2410C" stroke-width="1.5"/>
+                                <!-- Ears -->
+                                <polygon points="118,34 116,24 123,30" fill="#EA580C"/>
+                                <polygon points="132,34 134,24 127,30" fill="#EA580C"/>
+                                <circle cx="122" cy="38" r="1.2" fill="#1E293B"/>
+                                <circle cx="128" cy="38" r="1.2" fill="#1E293B"/>
+
+                                <text x="75" y="85" font-size="7" font-weight="bold" fill="#78350F" text-anchor="middle" font-family="Fredoka">Snail = Smallest 🐌</text>
+                            </svg>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Bottom Control and Feedback Bar -->
+                <div class="mt-8 pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div id="overallFeedback" class="text-sm font-bold text-slate-700"></div>
+
+                    <div class="flex items-center gap-3 w-full sm:w-auto">
+                        <button onclick="resetWorksheet()" class="flex-1 sm:flex-initial px-5 py-3 rounded-2xl border border-slate-300 text-slate-600 hover:bg-slate-100 font-bold text-sm transition">
+                            🔄 إعادة المحاولة
+                        </button>
+                        <button onclick="checkWorksheet()" class="flex-1 sm:flex-initial bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-700 hover:to-indigo-800 text-white font-black px-8 py-3.5 rounded-2xl shadow-lg shadow-purple-200 active:scale-95 transition flex items-center justify-center gap-2">
+                            <span>✓</span>
+                            <span>تصحيح الإجابات</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Victory Modal with Certificate -->
+    <div id="victoryModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 text-center shadow-2xl border-4 border-amber-300 relative transform transition-all scale-95 animate-in">
+            <div class="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center text-4xl mx-auto mb-3 shadow-inner">
+                🏆
+            </div>
+            <span class="text-xs bg-purple-100 text-purple-800 font-bold px-3 py-1 rounded-full">LANGUA LEARN - وسام التميز</span>
+            <h3 class="text-2xl font-black text-slate-800 mt-2">أحسنت صنعاً! إجابة كاملة 5 / 5</h3>
+            <p class="text-xs text-slate-600 mt-2">
+                لقد أجبت على جميع فقرات ورقة العمل بنجاح وطبقت قواعد المقارنة والتفضيل والشواذ بإتقان رائع!
+            </p>
+
+            <div class="mt-5 p-3.5 bg-amber-50 rounded-2xl border border-amber-200 text-xs font-bold text-amber-900 flex items-center justify-center gap-2">
+                <span>⭐ إشراف المعلم:</span>
+                <span class="text-amber-950 font-black">ماجد السويهري</span>
+            </div>
+
+            <div class="mt-6 flex gap-2">
+                <button onclick="closeVictoryModal()" class="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 text-white font-bold py-3 rounded-xl transition text-sm">
+                    إغلاق ومتابعة التعلم
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Pure Web Audio API tone generator - self-contained sound effects
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+        let soundMuted = false;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new AudioContext();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function toggleSound() {
+            soundMuted = !soundMuted;
+            document.getElementById('soundIcon').innerText = soundMuted ? '🔇' : '🔊';
+            document.getElementById('soundBtn').classList.toggle('bg-rose-100', soundMuted);
+        }
+
+        function playSynthesizedSound(type) {
+            if (soundMuted) return;
+            try {
+                initAudio();
+                const now = audioCtx.currentTime;
+
+                if (type === 'select') {
+                    // Soft high pop
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(500, now);
+                    osc.frequency.exponentialRampToValueAtTime(800, now + 0.06);
+                    gain.gain.setValueAtTime(0.12, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.06);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.06);
+                } else if (type === 'place') {
+                    // Bubble drop sound
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(350, now);
+                    osc.frequency.exponentialRampToValueAtTime(700, now + 0.09);
+                    gain.gain.setValueAtTime(0.18, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.09);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.09);
+                } else if (type === 'success') {
+                    // Two friendly chimes
+                    [600, 900].forEach((freq, idx) => {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(freq, now + idx * 0.09);
+                        gain.gain.setValueAtTime(0.18, now + idx * 0.09);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.09 + 0.2);
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+                        osc.start(now + idx * 0.09);
+                        osc.stop(now + idx * 0.09 + 0.22);
+                    });
+                } else if (type === 'wrong') {
+                    // Soft descending buzz
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(220, now);
+                    osc.frequency.linearRampToValueAtTime(140, now + 0.2);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.2);
+                } else if (type === 'fanfare') {
+                    // Victory arpeggio
+                    [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(freq, now + i * 0.12);
+                        gain.gain.setValueAtTime(0.2, now + i * 0.12);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.12 + 0.35);
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+                        osc.start(now + i * 0.12);
+                        osc.stop(now + i * 0.12 + 0.38);
+                    });
+                }
+            } catch (err) {
+                console.log("Audio not supported or blocked");
+            }
+        }
+
+        // Native Speech Synthesis for English pronunciation
+        function speakText(text) {
+            try {
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    utterance.lang = 'en-US';
+                    utterance.rate = 0.9;
+                    window.speechSynthesis.speak(utterance);
+                }
+            } catch (e) {
+                console.log("TTS not supported");
+            }
+        }
+    </script>
+
+    <script>
+        // Exact words from the image word bank
+        const originalWords = ['better', 'longer', 'smallest', 'fastest', 'more beautiful'];
+
+        // Solution key mapping
+        const questionsKey = {
+            'q1': {
+                expected: 'longer',
+                sentence: 'Her hair is longer than my hair.',
+                reason: 'مقارنة بين اثنين لشعر الفتاة وشعري: Long + er + than'
+            },
+            'q2': {
+                expected: 'better',
+                sentence: 'The red bag is good, but the blue bag is better than the red bag.',
+                reason: 'صفة شاذة (Good تتحول إلى Better than)'
+            },
+            'q3': {
+                expected: 'fastest',
+                sentence: 'A rabbit is the fastest.',
+                reason: 'صيغة تفضيل بين 3 حيوانات: The + fast + est'
+            },
+            'q4': {
+                expected: 'more beautiful',
+                sentence: 'Butterflies are more beautiful than bees.',
+                reason: 'صفة طويلة متعددة المقاطع تأخذ: More + beautiful + than'
+            },
+            'q5': {
+                expected: 'smallest',
+                sentence: 'The snail is the smallest.',
+                reason: 'صيغة تفضيل: الحلزون هو الأصغر بين الثلاثة: The + small + est'
+            }
+        };
+
+        let userWorksheetAnswers = {};
+        let selectedChip = null;
+
+        function initWorksheet() {
+            userWorksheetAnswers = {};
+            selectedChip = null;
+            document.getElementById('overallFeedback').innerHTML = '';
+            document.getElementById('scoreBadge').innerText = '0';
+
+            // Populate the Word Bank chips
+            const bankContainer = document.getElementById('wordBankList');
+            bankContainer.innerHTML = '';
+
+            // Shuffle slightly for active engagement
+            const shuffled = [...originalWords].sort(() => Math.random() - 0.5);
+
+            shuffled.forEach((word, idx) => {
+                const chip = document.createElement('div');
+                chip.id = `bank-chip-${idx}`;
+                chip.dataset.word = word;
+                chip.draggable = true;
+                chip.className = 'word-draggable en-font font-black text-sm md:text-base bg-white text-slate-800 border-2 border-amber-300 px-4 py-2 rounded-2xl shadow-xs hover:border-amber-400 hover:bg-amber-50 active:scale-95 transition flex items-center gap-1.5 select-none';
+                chip.innerHTML = `<span>${word}</span>`;
+
+                // Drag Start & End
+                chip.ondragstart = (e) => {
+                    initAudio();
+                    e.dataTransfer.setData('text/plain', word);
+                    e.dataTransfer.setData('chip-id', chip.id);
+                    chip.classList.add('opacity-40');
+                };
+                chip.ondragend = () => {
+                    chip.classList.remove('opacity-40');
+                };
+
+                // Click / Tap selection for touch devices
+                chip.onclick = () => {
+                    initAudio();
+                    selectWordChip(chip);
+                };
+
+                bankContainer.appendChild(chip);
+            });
+
+            // Set up drop zones
+            Object.keys(questionsKey).forEach(qid => {
+                const slot = document.getElementById(`drop-${qid}`);
+                slot.className = 'handwriting-box min-w-[170px] min-h-[46px] px-3 py-1 rounded-md flex items-center justify-center transition cursor-pointer';
+                slot.innerHTML = `<span class="slot-placeholder text-xs text-slate-400 font-normal font-sans">اسحب أو انقر هنا</span>`;
+
+                const fbk = document.getElementById(`feedback-${qid}`);
+                fbk.className = 'text-xs font-bold mt-2 text-right hidden';
+                fbk.innerHTML = '';
+
+                // Drag over / leave / drop
+                slot.ondragover = (e) => {
+                    e.preventDefault();
+                    slot.classList.add('slot-target-active');
+                };
+                slot.ondragleave = () => {
+                    slot.classList.remove('slot-target-active');
+                };
+                slot.ondrop = (e) => {
+                    e.preventDefault();
+                    slot.classList.remove('slot-target-active');
+                    const word = e.dataTransfer.getData('text/plain');
+                    const chipId = e.dataTransfer.getData('chip-id');
+                    placeWordInSlot(qid, word, chipId);
+                };
+            });
+        }
+
+        function selectWordChip(chip) {
+            document.querySelectorAll('.word-draggable').forEach(c => c.classList.remove('selected-chip'));
+
+            if (selectedChip === chip) {
+                selectedChip = null;
+            } else {
+                selectedChip = chip;
+                chip.classList.add('selected-chip');
+                playSynthesizedSound('select');
+            }
+        }
+
+        function handleSlotClick(qid) {
+            initAudio();
+            if (selectedChip) {
+                const word = selectedChip.dataset.word;
+                const chipId = selectedChip.id;
+                placeWordInSlot(qid, word, chipId);
+                selectedChip.classList.remove('selected-chip');
+                selectedChip = null;
+            } else {
+                // If clicked an existing filled slot, remove it back to the bank
+                if (userWorksheetAnswers[qid]) {
+                    clearSlot(qid);
+                }
+            }
+        }
+
+        function placeWordInSlot(qid, word, chipId) {
+            // If already filled, unhide the old chip
+            if (userWorksheetAnswers[qid]) {
+                const prevChipId = userWorksheetAnswers[qid].chipId;
+                if (prevChipId) {
+                    const el = document.getElementById(prevChipId);
+                    if (el) el.classList.remove('hidden');
+                }
+            }
+
+            userWorksheetAnswers[qid] = { word: word, chipId: chipId };
+
+            const slot = document.getElementById(`drop-${qid}`);
+            slot.innerHTML = `
+                <div class="flex items-center gap-2">
+                    <span class="en-font font-black text-purple-800 text-lg md:text-xl tracking-wide">${word}</span>
+                    <button type="button" onclick="event.stopPropagation(); clearSlot('${qid}')" class="text-slate-400 hover:text-rose-500 font-bold text-xs p-1">✕</button>
+                </div>
+            `;
+
+            // Hide placed chip from bank
+            if (chipId) {
+                const chipEl = document.getElementById(chipId);
+                if (chipEl) chipEl.classList.add('hidden');
+            }
+
+            playSynthesizedSound('place');
+        }
+
+        function clearSlot(qid) {
+            if (userWorksheetAnswers[qid]) {
+                const chipId = userWorksheetAnswers[qid].chipId;
+                if (chipId) {
+                    const chipEl = document.getElementById(chipId);
+                    if (chipEl) chipEl.classList.remove('hidden');
+                }
+                delete userWorksheetAnswers[qid];
+            }
+
+            const slot = document.getElementById(`drop-${qid}`);
+            slot.className = 'handwriting-box min-w-[170px] min-h-[46px] px-3 py-1 rounded-md flex items-center justify-center transition cursor-pointer';
+            slot.innerHTML = `<span class="slot-placeholder text-xs text-slate-400 font-normal font-sans">اسحب أو انقر هنا</span>`;
+
+            const fbk = document.getElementById(`feedback-${qid}`);
+            if (fbk) fbk.classList.add('hidden');
+
+            playSynthesizedSound('select');
+        }
+
+        function checkWorksheet() {
+            initAudio();
+            let score = 0;
+            const total = 5;
+
+            Object.keys(questionsKey).forEach(qid => {
+                const expected = questionsKey[qid].expected;
+                const userAns = userWorksheetAnswers[qid] ? userWorksheetAnswers[qid].word : null;
+                const slot = document.getElementById(`drop-${qid}`);
+                const fbk = document.getElementById(`feedback-${qid}`);
+
+                fbk.classList.remove('hidden', 'text-emerald-700', 'text-rose-600');
+
+                if (userAns && userAns.toLowerCase() === expected.toLowerCase()) {
+                    score++;
+                    slot.className = 'handwriting-box min-w-[170px] min-h-[46px] px-3 py-1 rounded-md flex items-center justify-center transition border-b-2 border-emerald-500 bg-emerald-50/80';
+                    fbk.classList.add('text-emerald-700');
+                    fbk.innerHTML = `✓ أحسنت! إجابة صحيحة: <span class="en-font font-bold">${expected}</span> (${questionsKey[qid].reason})`;
+                } else {
+                    slot.className = 'handwriting-box min-w-[170px] min-h-[46px] px-3 py-1 rounded-md flex items-center justify-center transition border-b-2 border-rose-500 bg-rose-50/80';
+                    fbk.classList.add('text-rose-600');
+                    fbk.innerHTML = `✕ الإجابة الصحيحة هي: <b class="en-font underline font-black text-rose-800">${expected}</b> (${questionsKey[qid].reason})`;
+                }
+            });
+
+            document.getElementById('scoreBadge').innerText = score;
+            const overall = document.getElementById('overallFeedback');
+
+            if (score === total) {
+                overall.innerHTML = `<span class="text-emerald-700 font-black">🎉 ممتاز ورائع جداً! النتيجة الكاملة (5 من 5).</span>`;
+                playSynthesizedSound('fanfare');
+                confetti({
+                    particleCount: 80,
+                    spread: 70,
+                    origin: { y: 0.6 }
+                });
+                setTimeout(() => {
+                    document.getElementById('victoryModal').classList.remove('hidden');
+                }, 700);
+            } else {
+                overall.innerHTML = `<span class="text-amber-700 font-bold">أحرزت ${score} من أصل ${total}. تفقد الملاحظات الموضحة باللون الأحمر ثم أعد المحاولة!</span>`;
+                playSynthesizedSound(score > 0 ? 'success' : 'wrong');
+            }
+        }
+
+        function resetWorksheet() {
+            initWorksheet();
+        }
+
+        function closeVictoryModal() {
+            document.getElementById('victoryModal').classList.add('hidden');
+        }
+
+        // Initialize on load
+        window.addEventListener('DOMContentLoaded', () => {
+            initWorksheet();
+        });
+    </script>
+</body>
+</html>
